@@ -48,6 +48,20 @@ class TestBase < Test::Unit::TestCase
       assert_equal 1, x
     end
 
+    should "execute a proc passed in as changes to the event args" do
+      vals = []
+      @obs.subscribe(/after/){|_,a|vals << a.changes}
+      @obs.send(:changing, :a_change, :changes=>lambda {[1,2,3]}){1==1}
+      assert_equal [1,2,3], vals[0]
+    end
+
+    should "provide method level access to change args" do
+      vals = []
+      @obs.subscribe(/after/){|_,a|vals << a.haha}
+      @obs.send(:changing, :a_change, :haha=>"hoho"){1==1}
+      assert_equal "hoho", vals[0]
+    end
+
   end
 
 end

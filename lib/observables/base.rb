@@ -25,7 +25,19 @@ module Observables
     end
 
     def create_event_args(change_type,opts={})
-      {:change_type=>change_type}.merge(opts)
+      args = {:change_type=>change_type, :current_values=>self}.merge(opts)
+      class << args
+        def changes
+          chgs, cur_values = self[:changes], self[:current_values]
+          chgs && chgs.respond_to?(:call) ? chgs.call(cur_values) : chgs
+        end
+
+        def method_missing(method)
+          self.keys.include?(method) ? self[method] : super
+        end
+      end
+      args.delete(:current)
+      args
     end
 
   end
