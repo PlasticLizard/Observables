@@ -1,7 +1,9 @@
-require 'helper'
+require 'test_helper'
 
 class TestObservables < Test::Unit::TestCase
-  should "probably rename this file and start testing for real" do
-    flunk "hey buddy, you should probably rename this file and start testing for real"
+  context "including observables" do
+    should "include something or other" do
+      assert_equal defined?(Observables), "constant"
+    end
   end
 end
