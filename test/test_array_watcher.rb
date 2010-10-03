@@ -12,7 +12,7 @@ class TestArrayWatcher < Test::Unit::TestCase
 
     should "notify observers of any change that adds elements to itself" do
       before_methods, after_methods = [],[]
-      method_list = [:<<, :push, :concat, :insert, :unshift]
+      method_list = Observables::ArrayWatcher::ADD_METHODS
       @ary.subscribe(/before_added/){|_,args|before_methods<<args[:trigger]}
       @ary.subscribe(/after_added/) {|_,args|after_methods<<args[:trigger]}
       method_list.each do |method|
@@ -25,7 +25,7 @@ class TestArrayWatcher < Test::Unit::TestCase
 
     should "notify observers of any change that modifies elements" do
       before_methods, after_methods = [],[]
-      method_list = [:"[]=", :collect!, :map!, :flatten!, :replace, :reverse!, :sort!, :fill]
+      method_list = Observables::ArrayWatcher::MODIFIER_METHODS
       @ary.subscribe(/before_modified/){|_,args|before_methods<<args[:trigger]}
       @ary.subscribe(/after_modified/) {|_,args|after_methods<<args[:trigger]}
       method_list.each do |method|
@@ -38,7 +38,7 @@ class TestArrayWatcher < Test::Unit::TestCase
 
     should "notify observers of any change that removes elements" do
       before_methods, after_methods = [],[]
-      method_list = [:clear, :compact!, :delete, :delete_at, :delete_if, :pop, :reject!, :shift, :slice!, :uniq!]
+      method_list = Observables::ArrayWatcher::REMOVE_METHODS
       @ary.subscribe(/before_removed/){|_,args|before_methods<<args[:trigger]}
       @ary.subscribe(/after_removed/) {|_,args|after_methods<<args[:trigger]}
       method_list.each do |method|
@@ -98,19 +98,22 @@ class TestArrayWatcher < Test::Unit::TestCase
         assert_equal [], get_changes(@ary){@ary.uniq!}
       end
       should "calculate changes for replace" do
-        assert_equal [4,5,6,7], get_changes(@ary){@ary.replace([4,5,6,7])}
+        assert_equal({:removed=>@ary.dup,:added=>[4,5,6,7]}, get_changes(@ary){@ary.replace([4,5,6,7])})
       end
       should "calculate changes for []=" do
         assert_equal [6,7,8,9], get_changes(@ary){@ary[3,4]=[6,7,8,9]}
       end
+      should "calculated changes for []= when []= is a modification method" do
+        assert_equal({:removed=>[1],:added=>[9]},get_changes(@ary){@ary[0]=9})
+      end
       should "return the original array as changes for other modification methods of array" do
         [:collect!, :map!, :flatten!, :reverse!, :sort!].each do |method|
           ary = @ary.dup
-          assert_equal [1,2,3], get_changes(ary){ary.send(method)}
+          assert_equal({:removed=>ary.dup, :added=>ary.dup.tap{|a|a.send(method)}}, get_changes(ary){ary.send(method)})
         end
       end
       should "return the original array as changes for fill" do
-        assert_equal [1,2,3], get_changes(@ary){@ary.fill("*")}
+        assert_equal({:removed=>@ary.dup, :added=>@ary.dup.fill("*")}, get_changes(@ary){@ary.fill("*")})
       end
     end
   end
@@ -128,9 +131,9 @@ class TestArrayWatcher < Test::Unit::TestCase
 
   def get_changes(ary)
     changes = []
-    sub = ary.subscribe(/after/){|_,args|changes.replace(args.changes)}
+    sub = ary.subscribe(/after/){|_,args|changes << args.changes}
     yield
     ary.unsubscribe(sub)
-    changes
+    changes.pop
   end
 end

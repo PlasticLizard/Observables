@@ -1,6 +1,6 @@
-class ::Array
+class ::Hash
   def make_observable
-    class << self; include Observables::ArrayWatcher; end
+    class << self; include Observables::HashWatcher; end
   end
 
   def observable?

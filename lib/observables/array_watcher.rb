@@ -3,45 +3,27 @@ module Observables
   module ArrayWatcher
     include Observables::Base
 
-    [:<<, :push, :concat, :insert, :unshift].each do |add_method|
-      class_eval <<-EOS
-        def #{add_method}(*args,&block)
-          changes = changes_for(:added,:#{add_method},*args,&block)
-          changing(:added,:trigger=>:#{add_method}, :changes=>changes) { super }
-        end
-      EOS
+    ADD_METHODS =       :<<, :push, :concat, :insert, :unshift
+    MODIFIER_METHODS =  :collect!, :map!, :flatten!, :replace, :reverse!, :sort!, :fill
+    REMOVE_METHODS =    :clear, :compact!, :delete, :delete_at, :delete_if, :pop, :reject!, :shift, :slice!, :uniq!
+
+    #[]= can either be an add method or a modifier method depending on
+    #if the previous key exists
+    def []=(*args)
+      change_type = args[0] >= length ? :added : :modified
+      changes = changes_for(change_type,:"[]=",*args)
+      changing(change_type,:trigger=>:"[]=", :changes=>changes) {super}
     end
 
-    [:"[]=", :collect!, :map!, :flatten!, :replace, :reverse!, :sort!, :fill].each do |mod_method|
-      class_eval <<-EOS
-        def #{mod_method}(*args,&block)
-          changes = changes_for(:modified,:#{mod_method},*args,&block)
-          changing(:modified,:trigger=>:#{mod_method}, :changes=>changes) { super }
-        end
-      EOS
-    end
-
-    [:clear, :compact!, :delete, :delete_at, :delete_if, :pop, :reject!, :shift, :slice!, :uniq!].each do |del_method|
-      class_eval <<-EOS
-        def #{del_method}(*args,&block)
-          changes = changes_for(:removed,:#{del_method},*args,&block)
-          changing(:removed,:trigger=>:#{del_method}, :changes=>changes) { super }
-        end
-      EOS
-    end
-
-    def dup
-      super.tap {|a|a.make_observable}
-    end
+    override_mutators :added=>    ADD_METHODS,
+                      :modified=> MODIFIER_METHODS,
+                      :removed=>  REMOVE_METHODS
 
     def changes_for(change_type, trigger_method, *args, &block)
-      #This method returns a lambda because many uses of this library may not care
-      #what the actual changes were. For those cases, it is wasteful to calculate
-      #the changes particularly for very large arrays, so this lambda will only
-      #get called when the consumer calls .changes on the event args
       prev = self.dup.to_a
       if change_type == :added
         case trigger_method
+          when :"[]=" then lambda {args[-1]}
           when :<<, :push, :unshift then lambda {args}
           when :concat then lambda {args[0]}
           when :insert then lambda {args[1..-1]}
@@ -58,9 +40,9 @@ module Observables
         end
       else
         case trigger_method
-          when :replace then lambda {args[0]}
-          when :"[]=" then args[-1]
-          else lambda {prev.uniq}
+          when :replace then lambda {{:removed=>prev, :added=>args[0]}}
+          when :"[]=" then lambda {{:removed=>[prev[*args[0..-2]]].flatten, :added=>[args[-1]].flatten}}
+          else lambda {|cur|{:removed=>prev.uniq, :added=>cur}}
         end
       end
     end
