@@ -38,7 +38,7 @@ class TestHashWatcher < Test::Unit::TestCase
 
     context "Calling #changes on the event args" do
       should "calculate changes for #[]= as an addition" do
-        assert_equal [[:f,9]],get_changes(@hash){ @hash[:f] = 9}
+        assert_equal [[:f,9]],get_changes(@hash){ @hash[:f] = 9}[:added]
       end
       should "calculate changes for #[]= as a modification" do
         assert_equal({:removed=>[[:a,1]],:added=>[[:a,9]]}, get_changes(@hash){@hash[:a]=9})
@@ -53,19 +53,19 @@ class TestHashWatcher < Test::Unit::TestCase
         end
       end
       should "calculate changes for #clear" do
-        assert_equal @hash.to_a, get_changes(@hash){@hash.clear}
+        assert_equal @hash.to_a, get_changes(@hash){@hash.clear}[:removed]
       end
       should "calculate changes for #delete" do
-        assert_equal({:a=>1}.to_a, get_changes(@hash){@hash.delete(:a)})
+        assert_equal({:a=>1}.to_a, get_changes(@hash){@hash.delete(:a)}[:removed])
       end
       should "calculate changes for #delete_if, #reject!" do
         [:delete_if,:reject!].each do |method|
           hash = @hash.dup
-          assert_equal({:a=>1,:c=>"3"}.to_a,get_changes(hash){hash.send(method){|k,v|[:a,:c].include?(k)}})
+          assert_equal({:a=>1,:c=>"3"}.to_a,get_changes(hash){hash.send(method){|k,v|[:a,:c].include?(k)}}[:removed])
         end
       end
       should "calculate changes for #shift" do
-        assert_equal(@hash.dup.shift,get_changes(@hash){@hash.shift})
+        assert_equal(@hash.dup.shift,get_changes(@hash){@hash.shift}[:removed])
       end
     end
   end

@@ -51,57 +51,57 @@ class TestArrayWatcher < Test::Unit::TestCase
 
     context "Calling #changes on the event args" do
       should "calculate changes for #<<" do
-        assert_equal [9],get_changes(@ary){ @ary << 9}
+        assert_equal [9],get_changes(@ary){ @ary << 9}[:added]
       end
       should "calculate changes for #push, #unshift" do
         [:push,:unshift].each do|method|
           ary = @ary.dup
-          assert_equal [1,2,3],get_changes(ary){ary.send(method,1,2,3)}
+          assert_equal [1,2,3],get_changes(ary){ary.send(method,1,2,3)}[:added]
         end
       end
       should "calculate changes for #concat" do
-        assert_equal [1,2,3],get_changes(@ary){@ary.concat([1,2,3])}
+        assert_equal [1,2,3],get_changes(@ary){@ary.concat([1,2,3])}[:added]
       end
       should "calculate changes for insert" do
-        assert_equal [3,4,5],get_changes(@ary){@ary.insert(2,3,4,5)}
+        assert_equal [3,4,5],get_changes(@ary){@ary.insert(2,3,4,5)}[:added]
       end
       should "calculate changes for delete" do
-        assert_equal [2],get_changes(@ary){@ary.delete(2)}
+        assert_equal [2],get_changes(@ary){@ary.delete(2)}[:removed]
       end
       should "calculate changes for delete_at" do
-        assert_equal [2],get_changes(@ary){@ary.delete_at(1)}
+        assert_equal [2],get_changes(@ary){@ary.delete_at(1)}[:removed]
       end
       should "calculate changes for delete_if, reject!" do
         [:delete_if, :reject!].each do |method|
           ary = @ary.dup
-          assert_equal [2], get_changes(ary){ary.send(method){|i|i%2==0}}
+          assert_equal [2], get_changes(ary){ary.send(method){|i|i%2==0}}[:removed]
         end
       end
       should "calculate changes for pop" do
-        assert_equal [3], get_changes(@ary){@ary.pop}
+        assert_equal [3], get_changes(@ary){@ary.pop}[:removed]
       end
       should "calculate changes for shift" do
-        assert_equal [1], get_changes(@ary){@ary.shift}
+        assert_equal [1], get_changes(@ary){@ary.shift}[:removed]
       end
       should "calculate changes for clear" do
-        assert_equal [1,2,3], get_changes(@ary){@ary.clear}
+        assert_equal [1,2,3], get_changes(@ary){@ary.clear}[:removed]
       end
       should "calculate changes for compact!" do
         @ary = [1,2,nil,3,nil,4].tap{|a|a.make_observable}
-        assert_equal [nil], get_changes(@ary){@ary.compact!}
+        assert_equal [nil], get_changes(@ary){@ary.compact!}[:removed]
       end
       should "calculate changes for slice!" do
-        assert_equal [2,3], get_changes(@ary){@ary.slice!(1,2)}
+        assert_equal [2,3], get_changes(@ary){@ary.slice!(1,2)}[:removed]
       end
       should "calculate changes for uniq!" do
         @ary = [1,2,2,3,3,4,4,5].tap{|a|a.make_observable}
-        assert_equal [], get_changes(@ary){@ary.uniq!}
+        assert_equal [], get_changes(@ary){@ary.uniq!}[:removed]
       end
       should "calculate changes for replace" do
         assert_equal({:removed=>@ary.dup,:added=>[4,5,6,7]}, get_changes(@ary){@ary.replace([4,5,6,7])})
       end
       should "calculate changes for []=" do
-        assert_equal [6,7,8,9], get_changes(@ary){@ary[3,4]=[6,7,8,9]}
+        assert_equal [6,7,8,9], get_changes(@ary){@ary[3,4]=[6,7,8,9]}[:added]
       end
       should "calculated changes for []= when []= is a modification method" do
         assert_equal({:removed=>[1],:added=>[9]},get_changes(@ary){@ary[0]=9})

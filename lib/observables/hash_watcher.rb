@@ -20,13 +20,13 @@ module Observables
     def changes_for(change_type, trigger_method, *args, &block)
       prev = self.dup
       if change_type == :added
-        lambda {[args]}
+        lambda {{:added=>[args]}}
       elsif change_type == :removed
         case trigger_method
-          when :clear then lambda{prev.to_a}
-          when :delete then lambda{[[args[0],prev[args[0]]]]}
-          when :delete_if, :reject! then lambda{prev.select(&block)}
-          when :shift then lambda { [prev.keys[0],prev.values[0]]}
+          when :clear then lambda{{:removed=>prev.to_a}}
+          when :delete then lambda{{:removed=>[[args[0],prev[args[0]]]]}}
+          when :delete_if, :reject! then lambda{{:removed=>prev.select(&block)}}
+          when :shift then lambda { {:removed=>[prev.keys[0],prev.values[0]]}}
         end
       else
         case trigger_method

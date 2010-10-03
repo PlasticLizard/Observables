@@ -23,20 +23,20 @@ module Observables
       prev = self.dup.to_a
       if change_type == :added
         case trigger_method
-          when :"[]=" then lambda {args[-1]}
-          when :<<, :push, :unshift then lambda {args}
-          when :concat then lambda {args[0]}
-          when :insert then lambda {args[1..-1]}
-          else lambda { |cur| (cur - prev).uniq }
+          when :"[]=" then lambda {{:added=>args[-1]}}
+          when :<<, :push, :unshift then lambda {{:added=>args}}
+          when :concat then lambda {{:added=>args[0]}}
+          when :insert then lambda {{:added=>args[1..-1]}}
+          else lambda { |cur| {:added=>(cur - prev).uniq }}
         end
       elsif change_type == :removed
         case trigger_method
-          when :delete then lambda {args}
-          when :delete_at then lambda {[prev[args[0]]]}
-          when :delete_if, :reject! then lambda {prev.select(&block)}
-          when :pop then lambda {[prev[-1]]}
-          when :shift then lambda {[prev[0]]}
-          else lambda { |cur| (prev - cur).uniq }
+          when :delete then lambda {{:removed=>args}}
+          when :delete_at then lambda {{:removed=>[prev[args[0]]]}}
+          when :delete_if, :reject! then lambda {{:removed=>prev.select(&block)}}
+          when :pop then lambda {{:removed=>[prev[-1]]}}
+          when :shift then lambda {{:removed=>[prev[0]]}}
+          else lambda { |cur| {:removed=>(prev - cur).uniq }}
         end
       else
         case trigger_method
