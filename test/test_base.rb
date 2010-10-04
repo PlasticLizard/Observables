@@ -76,34 +76,34 @@ class TestBase < Test::Unit::TestCase
         @parent = @owner.new
       end
       should "notify the parent via standard callback method" do
-        @obs.set_owner @parent
+        @obs.set_observer @parent
         @obs.send(:changing, :a_change){1==1}
         assert_equal @obs, @parent.changed_args[0]
       end
       should "notify the parent via custom callback method when specified" do
-        @obs.set_owner @parent, :callback_method=>:another_child_changed
+        @obs.set_observer @parent, :callback_method=>:another_child_changed
         @obs.send(:changing, :a_change) {1==1}
         assert_equal @obs, @parent.changed_args[0]
       end
       should "notify the parent via a block if provided" do
         changed_args = []
-        @obs.set_owner(@parent) { |obs,*_| changed_args << obs }
+        @obs.set_observer(@parent) { |obs,*_| changed_args << obs }
         @obs.send(:changing, :a_change) {1==1}
         assert_equal @obs, changed_args.pop
       end
       should "respect a subscription pattern when notifying the parent" do
         events = []
-        @obs.set_owner(@parent, :pattern=>/before/){|_,evt,*_| events << evt}
+        @obs.set_observer(@parent, :pattern=>/before/){|_,evt,*_| events << evt}
         @obs.send(:changing,:a_change){1==1}
         assert_equal 1, events.length
         assert_equal :before_a_change, events.pop
       end
       should "stop notifying the parent after disown is called" do
         events = []
-        @obs.set_owner(@parent){|*args|events << args}
+        @obs.set_observer(@parent){|*args|events << args}
         @obs.send(:changing,:a_change){1==1}
         assert_equal 2, events.length
-        @obs.disown
+        @obs.clear_observer
         @obs.send(:changing,:a_change){1==1}
         assert_equal 2, events.length
       end
