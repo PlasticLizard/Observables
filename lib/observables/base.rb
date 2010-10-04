@@ -1,75 +1,78 @@
 require 'active_support/concern'
 require "active_support/notifications/fanout"
 require 'active_support/core_ext/object/duplicable'
+require 'active_support/core_ext/array/extract_options'
 
 module Observables
   module Base
     extend ActiveSupport::Concern
 
-    def notifier
-      @notifier ||= ActiveSupport::Notifications::Fanout.new
-    end
-
-    def subscribe(pattern=nil,&block)
-      notifier.subscribe(pattern,&block)
-    end
-
-    def unsubscribe(subscriber)
-      notifier.unsubscribe(subscriber)
-    end
-
-    def dup
-      super.tap {|s|s.make_observable}
-    end
-
-    def set_observer(new_owner,opts={},&block)
-      raise "An owner was not provided. If you are trying to disown an observable object, please use 'disown' instead" unless new_owner
-      raise "This observable object is already owner by another object. Please call 'disown' to remove the previous owner" if @owner_subscription
-      @owner = new_owner
-      pattern = opts[:pattern] || /.*/
-      callback_method = opts[:callback_method] || :child_changed
-      @owner_subscription = subscribe(pattern) do |*args|
-        block ? block.call(self,*args) :
-                @owner.send(callback_method,self,*args) if @owner.respond_to?(callback_method)
+    module InstanceMethods
+      def notifier
+        @notifier ||= ActiveSupport::Notifications::Fanout.new
       end
-    end
 
-    def clear_observer
-      unsubscribe(@owner_subscription) if @owner_subscription
-      @owner_subscription = nil
-    end
-
-    protected
-
-    def changing(change_type,opts={})
-      args = create_event_args(change_type,opts)
-      notifier.publish "before_#{change_type}".to_sym, args
-      yield.tap do
-        notifier.publish "after_#{change_type}".to_sym, args
+      def subscribe(pattern=nil,&block)
+        notifier.subscribe(pattern,&block)
       end
-    end
 
-    def create_event_args(change_type,opts={})
-      args = {:change_type=>change_type, :current_values=>self}.merge(opts)
-      class << args
-        def changes
-          chgs, cur_values = self[:changes], self[:current_values]
-          chgs && chgs.respond_to?(:call) ? chgs.call(cur_values) : chgs
-        end
+      def unsubscribe(subscriber)
+        notifier.unsubscribe(subscriber)
+      end
 
-        def method_missing(method)
-          self.keys.include?(method) ? self[method] : super
+      def dup
+        super.tap {|s|s.make_observable}
+      end
+
+      def set_observer(*args,&block)
+        clear_observer
+        opts = args.extract_options!
+        @_observer_owner = args.pop
+        pattern = opts[:pattern] || /.*/
+        callback_method = opts[:callback_method] || :child_changed
+        @_owner_subscription = subscribe(pattern) do |*args|
+          block ? block.call(self,*args) :
+                  (@_observer_owner.send(callback_method,self,*args) if @_observer_owner && @_observer_owner.respond_to?(callback_method))
         end
       end
-      args.delete(:current)
-      args
-    end
 
-    def changes_for(change_type,trigger_method,*args,&block)
-      #This method should return a lambda that takes the current
-      #value of the collection as an argument, and returns
-      #the expected changes that will result from trigger_method
-      nil
+      def clear_observer
+        unsubscribe(@_owner_subscription) if @_owner_subscription
+        @_owner_subscription = nil
+      end
+
+      protected
+
+      def changing(change_type,opts={})
+        args = create_event_args(change_type,opts)
+        notifier.publish "before_#{change_type}".to_sym, args
+        yield.tap do
+          notifier.publish "after_#{change_type}".to_sym, args
+        end
+      end
+
+      def create_event_args(change_type,opts={})
+        args = {:change_type=>change_type, :current_values=>self}.merge(opts)
+        class << args
+          def changes
+            chgs, cur_values = self[:changes], self[:current_values]
+            chgs && chgs.respond_to?(:call) ? chgs.call(cur_values) : chgs
+          end
+
+          def method_missing(method)
+            self.keys.include?(method) ? self[method] : super
+          end
+        end
+        args.delete(:current)
+        args
+      end
+
+      def changes_for(change_type,trigger_method,*args,&block)
+        #This method should return a lambda that takes the current
+        #value of the collection as an argument, and returns
+        #the expected changes that will result from trigger_method
+        nil
+      end
     end
 
     module ClassMethods

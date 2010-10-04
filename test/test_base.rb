@@ -98,7 +98,21 @@ class TestBase < Test::Unit::TestCase
         assert_equal 1, events.length
         assert_equal :before_a_change, events.pop
       end
-      should "stop notifying the parent after disown is called" do
+      should "notify the parent via argless block" do
+        events = []
+        @obs.set_observer(@parent, :pattern=>/before/){events << 1}
+        @obs.send(:changing, :a_change){1==1}
+        assert_equal 1, events.length
+      end
+      should "notify via block when no owner is given" do
+        events = []
+        my_ary = [1,2,3]
+        my_ary.make_observable
+        my_ary.set_observer(:pattern=>/before/){events << 1}
+        my_ary << 1
+        assert_equal 1, events.length
+      end
+      should "stop notifying the parent after clear_observer is called" do
         events = []
         @obs.set_observer(@parent){|*args|events << args}
         @obs.send(:changing,:a_change){1==1}
@@ -107,6 +121,7 @@ class TestBase < Test::Unit::TestCase
         @obs.send(:changing,:a_change){1==1}
         assert_equal 2, events.length
       end
+
     end
   end
 end

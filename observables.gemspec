@@ -3,13 +3,13 @@ require File.expand_path('../lib/observables/version', __FILE__)
 
 Gem::Specification.new do |s|
   s.name = 'observables'
-  s.homepage = 'http://github.com/jnunemaker/observables'
+  s.homepage = 'http://github.com/PlasticLizard/observables'
   s.summary = 'Observable arrays and hashes'
   s.require_path = 'lib'
   #s.default_executable = ''
   s.authors = ['Nathan Stults']
   s.email = ['hereiam@sonic.net']
-  #s.executables = ['mmconsole']
+  #s.executables = ['']
   s.version = Observables::Version
   s.platform = Gem::Platform::RUBY
   s.files = Dir.glob("{bin,examples,lib,rails,test}/**/*") + %w[LICENSE README.rdoc]

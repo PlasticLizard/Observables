@@ -4,9 +4,7 @@ class TestArrayWatcher < Test::Unit::TestCase
   context "An array which has included Observables::ArrayWatcher" do
     setup do
       @ary = Array.new([1,2,3]).tap do |a|
-         class << a
-           include Observables::ArrayWatcher
-         end
+         a.make_observable
       end
     end
 
