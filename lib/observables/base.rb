@@ -22,9 +22,26 @@ module Observables
       super.tap {|s|s.make_observable}
     end
 
+    def set_owner(new_owner,opts={},&block)
+      raise "An owner was not provided. If you are trying to disown an observable object, please use 'disown' instead" unless new_owner
+      raise "This observable object is already owner by another object. Please call 'disown' to remove the previous owner" if @owner_subscription
+      @owner = new_owner
+      pattern = opts[:pattern] || /.*/
+      callback_method = opts[:callback_method] || :child_changed
+      @owner_subscription = subscribe(pattern) do |*args|
+        block ? block.call(self,*args) :
+                @owner.send(callback_method,self,*args) if @owner.respond_to?(callback_method)
+      end
+    end
+
+    def disown
+      unsubscribe(@owner_subscription) if @owner_subscription
+      @owner_subscription = nil
+    end
+
     protected
 
-    def changing(change_type,opts)
+    def changing(change_type,opts={})
       args = create_event_args(change_type,opts)
       notifier.publish "before_#{change_type}".to_sym, args
       yield.tap do

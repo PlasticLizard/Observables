@@ -1,10 +1,5 @@
 class ::Hash
   def make_observable
-    class << self; include Observables::HashWatcher; end
+    class << self; include Observables::HashWatcher; end unless observable?
   end
-
-  def observable?
-    respond_to?(:subscribe)
-  end
-
 end
