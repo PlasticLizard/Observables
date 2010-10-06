@@ -26,6 +26,6 @@ task :release => :build do
   sh "git tag v#{Observables::Version}"
   sh "git push origin master"
   sh "git push origin v#{Observables::Version}"
-  sh "gem push mongo_mapper-#{Observables::Version}.gem"
+  sh "gem push observables-#{Observables::Version}.gem"
 end
 
