@@ -1,17 +1,117 @@
-= Observables
+ = Observables
 
-Description goes here.
+ Observables implements observable arrays and hashes by way of the ActiveModel::Notifier, the same mechanism
+ underlying the instrumentation API in Rails3. Observables collections broadcast detailed change information for
+ any state-modifying operations, including specific elements added or removed, when that information is practically
+ obtainable.
 
-== Note on Patches/Pull Requests
- 
-* Fork the project.
-* Make your feature addition or bug fix.
-* Add tests for it. This is important so I don't break it in a
-  future version unintentionally.
-* Commit, do not mess with rakefile, version, or history.
-  (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
-* Send me a pull request. Bonus points for topic branches.
+ == Installation
 
-== Copyright
+ Observables is available as a RubyGem:
 
-Copyright (c) 2010 Nathan Stults. See LICENSE for details.
+     gem install observables
+
+ == Observing the Observables
+
+ === Example:
+
+     #Getting an observable array
+
+     ary = [1,2,3] #or, ary = Observables::Array.new([1,2,3]), or, hsh = Observables::Hash
+     ary.observable? # => false
+     ary.can_be_observable? # => true
+     ary.make_observable => #<Class:#<Array:0x56a84a8>>
+
+     #Setting up a subscription
+
+     subscription = ary.subscribe do |change_type,args|
+         puts "Change type: #{change_type}"
+         puts "Trigger: #{args.trigger}"
+         puts "Changes: #{args.changes.inspect}"
+         puts "---"
+     end
+
+     #Do stuff
+
+     ary << 3
+     #   Change type: before_added
+     #   Trigger: <<
+     #   Changes: {:added=>[3]}
+     #   ---
+     #   Change type: after_added
+     #   Trigger: <<
+     #   Changes: {:added=>[3]}
+     #   => [1,2,3,3]
+
+     #Clean up
+
+     ary.unsubscribe(subscription)
+     ary << 4 # => [1,2,3,3,4]
+
+     #Only listen to after_xxx
+
+     subscription = ary.subscribe(/after/) do |change_type,_|
+     puts "Change type:#{change_type}"
+     end
+
+     ary.concat([9,10,11])
+
+     #   Change type: after_added, changes: {:added=>[9,10,11]}
+     #   => [1,2,3,3,4,9,10,11]
+
+ 	ary.replace([3,2,1])
+
+ 	#   Change type: after_modified, changed: {:added=>[3,2,1], :removed=>[1,2,3,3,4,9,10,11]}
+ 	#	=> [3,2,1]
+
+     #Hashes work too
+
+     hsh = {:a=>:b}
+     hsh.can_be_observable? # => true
+     hsh.make_observable
+     hsh.subscribe { |type,args| ... }
+
+ == Special case: ownership
+
+ Observables was created to assist in the implementation of proper dirty tracking for in-place modifications
+ to embedded collections in ORM's, particularly for documented oriented databases, where
+ this is a common situation. In this scenario and similar scenarios, observable collections
+ will only be subscribed to by the object that owns them. However, the parent object
+ may own any number of child collections. To avoid having to manage myriad subscription
+ objects, each observable collection can have a single 'observer' - and will manage the
+ subscription to that observer like so:
+
+ 	class Owner
+ 		def my_array
+ 			@my_array
+ 		end
+
+ 		def my_array=(new_array)
+ 			@my_array.clear_observer if @my_array
+ 			@my_array = new_array.tap {|a|a.make_observable}
+ 			@my_array.set_observer(self, :pattern=>/before/, :callback_method=>:my_array_before_change)
+ 			#Acceptable alernatives are:
+ 			#  @my_array.set_observer { |type,args| ... }
+ 			#  @my_array.set_observer(self, :pattern=>/before/) { |sender,type,args| ... }
+ 		end
+
+ 		def my_array_before_change(sender,type,args)
+ 			#sender = @my_array
+ 			#do something interesting, like, say, attribute_will_change!(:my_array)
+ 		end
+
+ 	end
+
+ == Note on Patches/Pull Requests
+
+ * Fork the project.
+ * Make your feature addition or bug fix.
+ * Add tests for it. This is important so I don't break it in a
+   future version unintentionally.
+ * Commit, do not mess with rakefile, version, or history.
+   (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
+ * Send me a pull request. Bonus points for topic branches.
+
+ == Copyright
+
+ Copyright (c) 2010 Nathan Stults. See LICENSE for details.
