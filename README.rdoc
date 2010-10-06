@@ -50,8 +50,8 @@
 
      #Only listen to after_xxx
 
-     subscription = ary.subscribe(/after/) do |change_type,arts|
-     puts "Change type:#{change_type}, changes: #{arbs.changes}"
+     subscription = ary.subscribe(/after/) do |change_type,args|
+     puts "Change type:#{change_type}, changes: #{args.changes}"
      end
 
      ary.concat([9,10,11])
