@@ -50,8 +50,8 @@
 
      #Only listen to after_xxx
 
-     subscription = ary.subscribe(/after/) do |change_type,_|
-     puts "Change type:#{change_type}"
+     subscription = ary.subscribe(/after/) do |change_type,arts|
+     puts "Change type:#{change_type}, changes: #{arbs.changes}"
      end
 
      ary.concat([9,10,11])
@@ -59,10 +59,10 @@
      #   Change type: after_added, changes: {:added=>[9,10,11]}
      #   => [1,2,3,3,4,9,10,11]
 
- 	ary.replace([3,2,1])
+     ary.replace([3,2,1])
 
- 	#   Change type: after_modified, changed: {:added=>[3,2,1], :removed=>[1,2,3,3,4,9,10,11]}
- 	#	=> [3,2,1]
+     #Change type: after_modified, changed: {:added=>[3,2,1], :removed=>[1,2,3,3,4,9,10,11]}
+     #	=> [3,2,1]
 
      #Hashes work too
 
@@ -91,12 +91,12 @@
  			@my_array = new_array.tap {|a|a.make_observable}
  			@my_array.set_observer(self, :pattern=>/before/, :callback_method=>:my_array_before_change)
  			#Acceptable alernatives are:
- 			#  @my_array.set_observer { |type,args| ... }
+ 			#  @my_array.set_observer { |sender,type,args| ... }
  			#  @my_array.set_observer(self, :pattern=>/before/) { |sender,type,args| ... }
  		end
 
  		def my_array_before_change(sender,type,args)
- 			#sender = @my_array
+ 			#sender == @my_array
  			#do something interesting, like, say, attribute_will_change!(:my_array)
  		end
 
