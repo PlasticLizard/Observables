@@ -14,7 +14,7 @@ class TestHashWatcher < Test::Unit::TestCase
       before_methods, after_methods = [],[]
       method_list = Observables::HashWatcher::MODIFIER_METHODS
       @hash.subscribe(/before_modified/){|_,args|before_methods<<args[:trigger]}
-      @hash.subscribe(/after_modified/) {|_,args|after_methods<<args[:trigger]}
+      @hash.subscribe(/after_modified/){|_,args|after_methods<<args[:trigger]}
       method_list.each do |method|
         args = args_for(method)
         args ? @hash.send(method,args) : @hash.send(method)
@@ -53,7 +53,7 @@ class TestHashWatcher < Test::Unit::TestCase
         end
       end
       should "calculate changes for #clear" do
-        assert_equal @hash.to_a, get_changes(@hash){@hash.clear}[:removed]
+        assert_equal [], @hash.to_a -  get_changes(@hash){@hash.clear}[:removed]
       end
       should "calculate changes for #delete" do
         assert_equal({:a=>1}.to_a, get_changes(@hash){@hash.delete(:a)}[:removed])
