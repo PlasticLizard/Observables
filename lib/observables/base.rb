@@ -21,7 +21,10 @@ module Observables
       end
 
       def dup
-        super.tap {|s|s.make_observable}
+        #This check is necessary in case a proxy is made observable,
+        #with an impementation of dup that returns its non-observable
+        #target
+        super.tap {|s| s.make_observable if s.respond_to?(:make_observable) }
       end
 
       def set_observer(*args,&block)
