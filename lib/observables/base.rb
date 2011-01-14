@@ -13,7 +13,8 @@ module Observables
       end
 
       def subscribe(pattern=nil,&block)
-        notifier.subscribe(pattern,&block)
+        callback = block || self
+        notifier.subscribe(pattern,callback)
       end
 
       def unsubscribe(subscriber)
@@ -31,12 +32,20 @@ module Observables
         clear_observer
         opts = args.extract_options!
         @_observer_owner = args.pop
+        @_observer_owner_callback_method = opts[:callback_method] || :child_changed
+        @_observer_owner_block = block
+
         pattern = opts[:pattern] || /.*/
-        callback_method = opts[:callback_method] || :child_changed
-        @_owner_subscription = subscribe(pattern) do |*args|
-          block ? block.call(self,*args) :
-                  (@_observer_owner.send(callback_method,self,*args) if @_observer_owner && @_observer_owner.respond_to?(callback_method))
-        end
+        #callback_method = opts[:callback_method] || :child_changed
+        @_owner_subscription = subscribe(pattern)
+      end
+
+      def call(*args)
+        block = @_observer_owner_block
+        callback_method = @_observer_owner_callback_method
+
+        block ? block.call(self,*args) :
+          (@_observer_owner.send(callback_method,self,*args) if @_observer_owner && @_observer_owner.respond_to?(callback_method))
       end
 
       def clear_observer
@@ -85,10 +94,10 @@ module Observables
             class_eval <<-EOS
               def #{method}(*args,&block)
                 changes = changes_for(:#{change_type},:#{method},*args,&block)
-                changing(:#{change_type},:trigger=>:#{method}, :changes=>changes){super}
-              end
-            EOS
-          end
+                                      changing(:#{change_type},:trigger=>:#{method}, :changes=>changes){super}
+                                             end
+                                      EOS
+                                    end
         end
       end
     end
